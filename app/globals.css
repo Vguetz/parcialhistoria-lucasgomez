@@ -1,26 +1,18 @@
 @import "tailwindcss";
 
+/* src/app/globals.css */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Fondo principal: un beige/crema apagado simulando papel viejo */
+  --paper-bg: #fbf1c7; 
+  /* Texto principal: un marrón muy oscuro/carbón, no negro puro para no cansar la vista */
+  --ink-dark: #3c3836;
+  /* Detalles y separadores: un tono óxido o sepia */
+  --sepia-accent: #b57614; 
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--paper-bg);
+  color: var(--ink-dark);
+  /* Agregamos una textura sutil de ruido de fondo para simular desgaste */
+  background-image: url('/textures/noise.svg');
 }
