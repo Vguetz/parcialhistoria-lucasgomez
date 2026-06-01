@@ -8,10 +8,10 @@ Title: Antique Desk
 */
 
 import * as THREE from "three";
-import React from "react";
+import React, { JSX } from "react";
 import { useGLTF } from "@react-three/drei";
 import { GLTF } from "three-stdlib";
-
+type GLTFAction = THREE.AnimationAction;
 type GLTFResult = GLTF & {
   nodes: {
     Handle_3_low_Desk_0: THREE.Mesh;
@@ -32,13 +32,13 @@ type GLTFResult = GLTF & {
   materials: {
     Desk: THREE.MeshStandardMaterial;
   };
-  animations: GLTFAction[];
+  animations: THREE.AnimationClip[];
 };
 
 export function Model(props: JSX.IntrinsicElements["group"]) {
   const { nodes, materials } = useGLTF(
     "/models/antique_desk.glb",
-  ) as GLTFResult;
+  ) as unknown as GLTFResult; // <--- Acá está el truco: doble casteo
   return (
     <group {...props} dispose={null}>
       <group rotation={[-Math.PI / 2, 0, 0]} scale={1.111}>
