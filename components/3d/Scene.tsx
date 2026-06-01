@@ -1,7 +1,12 @@
 "use client";
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useTexture, Html } from "@react-three/drei";
+import {
+  useTexture,
+  Html,
+  Environment,
+  OrbitControls,
+} from "@react-three/drei";
 import { Model } from "./Desk";
 import { PartKey, historyAnswers } from "@/lib/answers";
 import { animated, useSpring } from "@react-spring/three";
@@ -9,7 +14,7 @@ import * as THREE from "three";
 import { useThree, useFrame } from "@react-three/fiber";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
-type OpenItem = "batlle" | "caras" | "eldia" | null;
+type OpenItem = "batlle" | "caras" | "eldia" | "parte3" | "parte4" | null;
 
 // ─── Cámara animada con lerp ────────────────────────────────────────────────
 function CameraRig({
@@ -60,7 +65,15 @@ function ContentPanel({
   // ElDia tiene su propio layout especial
   const isElDia = openItem === "eldia";
   const partKey: PartKey | null =
-    openItem === "batlle" ? "parte1" : openItem === "caras" ? "parte2" : null;
+    openItem === "batlle"
+      ? "parte1"
+      : openItem === "caras"
+        ? "parte2"
+        : openItem === "parte3"
+          ? "parte3"
+          : openItem === "parte4"
+            ? "parte4"
+            : null;
 
   return (
     <div
@@ -390,15 +403,280 @@ function ElDiaItem({
   );
 }
 
+function Room() {
+  // 1. Cargamos las texturas (las imágenes deben estar en tu carpeta /public)
+  const paredTextura = useTexture("/pared-madera.jpg");
+  const pisoTextura = useTexture("/piso-madera.webp");
+
+  // 2. Configuramos la pared para que la textura se repita y no se estire
+  paredTextura.wrapS = THREE.RepeatWrapping; // Repetición horizontal
+  paredTextura.wrapT = THREE.RepeatWrapping; // Repetición vertical
+  paredTextura.repeat.set(8, 4); // Se repite 8 veces a lo ancho, 4 a lo alto
+
+  // 3. Configuramos el piso con su propia escala de repetición
+  pisoTextura.wrapS = THREE.RepeatWrapping;
+  pisoTextura.wrapT = THREE.RepeatWrapping;
+  pisoTextura.repeat.set(10, 10);
+
+  return (
+    <group>
+      {/* PISO */}
+      <mesh
+        position={[0, -3.5, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[30, 30]} />
+        {/* Reemplazamos el 'color' por 'map' para aplicar la imagen */}
+        <meshStandardMaterial map={pisoTextura} roughness={0.8} />
+      </mesh>
+
+      {/* PARED DE FONDO */}
+      <mesh position={[0, 4.5, -8]} receiveShadow>
+        <boxGeometry args={[30, 16, 0.5]} />
+        <meshStandardMaterial map={paredTextura} roughness={0.85} />
+      </mesh>
+
+      {/* PARED LATERAL (Izquierda) */}
+      <mesh
+        position={[-15, 4.5, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+        receiveShadow
+      >
+        <boxGeometry args={[30, 16, 0.5]} />
+        <meshStandardMaterial map={paredTextura} roughness={0.85} />
+      </mesh>
+
+      {/* NUEVA: PARED LATERAL (Derecha) */}
+      <mesh
+        position={[15, 4.5, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+        receiveShadow
+      >
+        <boxGeometry args={[30, 16, 0.5]} />
+        <meshStandardMaterial map={paredTextura} roughness={0.85} />
+      </mesh>
+
+      {/* ZÓCALOS (Podés dejarlos con color sólido para generar contraste) */}
+      <mesh position={[0, -3.2, -7.7]} receiveShadow>
+        <boxGeometry args={[30, 0.6, 0.1]} />
+        <meshStandardMaterial color="#140b05" roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─── Libreta (Parte 3) ──────────────────────────────────────────────────────
+function useLibretaTexture() {
+  const texture = useRef<THREE.CanvasTexture | null>(null);
+  if (!texture.current) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d")!;
+
+    // Fondo amarillento (papel avejentado)
+    ctx.fillStyle = "#ebdcb3";
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Margen rojo
+    ctx.strokeStyle = "#c96565";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(80, 0);
+    ctx.lineTo(80, 512);
+    ctx.stroke();
+
+    // Renglones azules
+    ctx.strokeStyle = "#80a5c2";
+    ctx.lineWidth = 1.5;
+    for (let i = 80; i < 512; i += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(512, i);
+      ctx.stroke();
+    }
+
+    // Texto de apunte
+    ctx.fillStyle = "#2c2a26";
+    ctx.font = "italic 28px serif";
+    ctx.fillText("Apuntes: Periodización", 100, 65);
+    ctx.font = "italic 18px serif";
+    ctx.fillText("- Etapa 1: Pacificación (1903-04)", 100, 105);
+    ctx.fillText("- Etapa 2: Estado Moderno (1905+)", 100, 135);
+
+    texture.current = new THREE.CanvasTexture(canvas);
+  }
+  return texture.current;
+}
+
+function LibretaItem({ position, isOpen, onOpen }: any) {
+  const [hovered, setHovered] = useState(false);
+  const tex = useLibretaTexture();
+  useEffect(() => {
+    document.body.style.cursor = hovered && !isOpen ? "pointer" : "auto";
+  }, [hovered, isOpen]);
+  const { pos, rot } = useSpring({
+    pos: isOpen ? [0, 5.2, 2.6] : position,
+    rot: isOpen ? [-Math.PI / 2, 0, 0] : [0, 0.3, 0],
+    config: { mass: 1, tension: 80, friction: 22 },
+  });
+
+  return (
+    <animated.mesh
+      position={pos as any}
+      rotation={rot as any}
+      castShadow
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => setHovered(false)}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!isOpen) onOpen();
+      }}
+    >
+      <boxGeometry args={[1.2, 0.08, 1.5]} />
+      <meshStandardMaterial
+        map={tex}
+        color={hovered && !isOpen ? "#ffffff" : "#ebdcb3"}
+      />
+      {!isOpen && (
+        <Html position={[0, 0.5, 0]} center>
+          <div
+            className={`transition-all duration-300 pointer-events-none select-none ${hovered ? "opacity-100 -translate-y-2" : "opacity-0"}`}
+          >
+            <div className="bg-[#3c3836] text-[#fbf1c7] px-4 py-2 rounded border border-[#b57614] font-serif text-sm">
+              ✦ Leer Apuntes (Parte 3)
+            </div>
+          </div>
+        </Html>
+      )}
+    </animated.mesh>
+  );
+}
+
+// ─── Carta de Reflexión (Parte 4) ───────────────────────────────────────────
+
+function useCartaTexture() {
+  const texture = useRef<THREE.CanvasTexture | null>(null);
+
+  if (!texture.current) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 600;
+    const ctx = canvas.getContext("2d")!;
+
+    // Papel blanco roto / elegante
+    ctx.fillStyle = "#fcf9f2";
+    ctx.fillRect(0, 0, 400, 600);
+
+    ctx.fillStyle = "#1a1a1a";
+    ctx.font = "bold 24px serif";
+    ctx.fillText("Reflexión Final", 40, 60);
+    ctx.fillRect(40, 70, 160, 2); // Línea subrayada
+
+    // Usamos serif en 14px para que sea legible pero ocupe menos ancho
+    ctx.font = "14px serif";
+
+    // El texto dividido manualmente para forzar los saltos de línea
+    const text = [
+      "Para la parte creativa me mandé a programar",
+      "de cero este entorno 3D interactivo para",
+      "simular el escritorio de 1904. Lo que más",
+      "me costó, fuera del código en sí, fue",
+      "escribir la editorial del diario 'El Día'.",
+      "Ponerme en la cabeza de un batllista de",
+      "esa época y tratar de copiar ese tono",
+      "sobrador de 'somos la civilización contra",
+      "lo peor', sin que sonara como una persona",
+      "de hoy, fue re jodido.",
+      "",
+      "Y sobre lo que aprendí... me di cuenta de",
+      "que la guerra de 1904 no era un simple",
+      "clásico de fútbol de Blancos contra",
+      "Colorados por ver quién ganaba. Era",
+      "literalmente el choque de dos mundos que",
+      "no podían convivir más, el Montevideo",
+      "moderno y centralizado, contra el interior",
+      "rural de los caudillos que querían seguir",
+      "haciendo la suya. Y la verdad que del",
+      "parcial en si, me gusto la libertad",
+      "creativa que nos diste para poder hacer",
+      "algo como este proyecto, ya que compensa",
+      "un poco mi poco pensamiento filosofico de",
+      "reflexion y me permite mostrar lo que",
+      "aprendí de una forma mas divertida y",
+      "original.",
+    ];
+
+    // Cambiamos el multiplicador a 18 para achicar el interlineado
+    // y asegurar que las 27 líneas entren en los 600px de altura de la hoja
+    text.forEach((line, i) => ctx.fillText(line, 40, 120 + i * 18));
+
+    texture.current = new THREE.CanvasTexture(canvas);
+  }
+  return texture.current;
+}
+
+function CartaItem({ position, isOpen, onOpen }: any) {
+  const [hovered, setHovered] = useState(false);
+  const tex = useCartaTexture();
+  useEffect(() => {
+    document.body.style.cursor = hovered && !isOpen ? "pointer" : "auto";
+  }, [hovered, isOpen]);
+  const { pos, rot } = useSpring({
+    pos: isOpen ? [0, 5.2, 2.6] : position,
+    rot: isOpen ? [-Math.PI / 2, 0, 0] : [0, -0.2, 0],
+    config: { mass: 1, tension: 80, friction: 22 },
+  });
+
+  return (
+    <animated.mesh
+      position={pos as any}
+      rotation={rot as any}
+      castShadow
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => setHovered(false)}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!isOpen) onOpen();
+      }}
+    >
+      <boxGeometry args={[1.0, 0.01, 1.4]} />
+      <meshStandardMaterial
+        map={tex}
+        color={hovered && !isOpen ? "#ffffff" : "#e6e1d5"}
+      />
+      {!isOpen && (
+        <Html position={[0, 0.5, 0]} center>
+          <div
+            className={`transition-all duration-300 pointer-events-none select-none ${hovered ? "opacity-100 -translate-y-2" : "opacity-0"}`}
+          >
+            <div className="bg-[#3c3836] text-[#fbf1c7] px-4 py-2 rounded border border-[#b57614] font-serif text-sm">
+              ✦ Reflexión Final (Parte 4)
+            </div>
+          </div>
+        </Html>
+      )}
+    </animated.mesh>
+  );
+}
+
 // ─── Scene ─────────────────────────────────────────────────────────────────
 export default function Scene() {
   const [openItem, setOpenItem] = useState<OpenItem>(null);
 
-  // Posiciones de los objetos
   const POSITIONS = {
     batlle: [-0.4, 3.7, 0.5] as [number, number, number],
     caras: [1.2, 3.7, 0.2] as [number, number, number],
     eldia: [-2.2, 3.7, -0.8] as [number, number, number],
+    parte3: [2.2, 3.7, -0.6] as [number, number, number], // Derecha, un poco atrás
+    parte4: [-2, 3.7, 1.8] as [number, number, number], // Izquierda, más cerca tuyo
   };
 
   const camTarget = new THREE.Vector3(
@@ -412,33 +690,51 @@ export default function Scene() {
     openItem === "eldia" ? 5.2 : openItem ? 4.8 : 3.7,
     openItem === "eldia" ? 2.6 : 0,
   );
-
   return (
     <>
-      <div className="w-full h-screen bg-[#1a1814]">
+      <div className="w-full h-screen">
         <Canvas
           shadows
           camera={{ position: [0, 5.5, 4.5], fov: 65 }}
           onCreated={({ camera }) => camera.lookAt(0, 3.7, 0)}
         >
           <CameraRig targetPos={camTarget} targetLook={camLook} />
+          {/* Controles para explorar */}
+          {/* <OrbitControls makeDefault /> */}
 
-          <ambientLight intensity={0.5} />
+          {/* El Environment YA NO TIENE 'background'. 
+              Ahora solo aporta reflejos de luz física, pero no se ve la foto. */}
+          <Environment preset="night" blur={0.2} />
+
+          {/* Luz de ambiente tenue para rellenar la habitación */}
+          <ambientLight intensity={0.4} />
+
+          {/* Lámparas que generan las sombras direccionales contra el piso y paredes */}
           <pointLight
-            position={[-1, 2, 1]}
+            position={[-1, 5, 1]}
             intensity={1.5}
             color="#e8b359"
             castShadow
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
           />
           <pointLight
-            position={[-1, 8, 1]}
-            intensity={2.5}
-            color="#e8b359"
+            position={[3, 8, 2]}
+            intensity={1.0}
+            color="#f4dca6"
             castShadow
           />
 
           <Suspense fallback={null}>
-            <Model scale={[8, 8, 8]} position={[0, -3.5, 0]} />
+            {/* Montamos la habitación en la escena */}
+            <Room />
+
+            <Model
+              scale={[8, 8, 8]}
+              position={[0, -3.5, 0]}
+              castShadow
+              receiveShadow
+            />
 
             <FloatingItem
               position={POSITIONS.batlle}
@@ -464,11 +760,22 @@ export default function Scene() {
               isOpen={openItem === "eldia"}
               onOpen={() => setOpenItem("eldia")}
             />
+
+            <LibretaItem
+              position={POSITIONS.parte3}
+              isOpen={openItem === "parte3"}
+              onOpen={() => setOpenItem("parte3")}
+            />
+
+            <CartaItem
+              position={POSITIONS.parte4}
+              isOpen={openItem === "parte4"}
+              onOpen={() => setOpenItem("parte4")}
+            />
           </Suspense>
         </Canvas>
       </div>
 
-      {/* Panel de contenido: completamente fuera del Canvas */}
       <ContentPanel openItem={openItem} onClose={() => setOpenItem(null)} />
     </>
   );
