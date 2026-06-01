@@ -2,7 +2,7 @@
 
 export const historyAnswers = {
   parte1: {
-    titulo: "Análisis: Caricatura de Cao (Caras y Caretas)",
+    titulo: "Análisis: Caricatura de Cao",
     preguntas: [
       {
         q: "1) Describí lo que ves en la imagen sin interpretarlo todavía...",
@@ -62,6 +62,15 @@ parte3: {
       {
         q: "Decisiones creativas, dificultades y aprendizajes:",
         a: "Para la parte creativa me mandé a programar de cero este entorno 3D interactivo para simular el escritorio de 1904. Lo que más me costó, fuera del código en sí, fue escribir la editorial del diario 'El Día'. Ponerme en la cabeza de un batllista de esa época y tratar de copiar ese tono sobrador de 'somos la civilización contra lo peor', sin que sonara como una persona de hoy, fue re jodido.\n\nY sobre lo que aprendí... me di cuenta de que la guerra de 1904 no era un simple clásico de fútbol de Blancos contra Colorados por ver quién ganaba. Era literalmente el choque de dos mundos que no podían convivir más, el Montevideo moderno y centralizado, contra el interior rural de los caudillos que querían seguir haciendo la suya. Y la verdad que del parcial en si, me gusto la libertad creativa que nos diste para poder hacer algo como este proyecto, ya que compensa un poco mi poco pensamiento filosofico de reflexion y me permite mostrar lo que aprendí de una forma mas divertida y original."
+      }
+    ]
+  },
+  fuentes: {
+    titulo: "Fuentes y Bibliografía",
+    preguntas: [
+      {
+        q: "Material de consulta utilizado para el desarrollo histórico:",
+        a: "1) Apuntes de clase y material bibliográfico.\n 2) Material en PDF (guerra_civil_1904.pdf,  batllismo.pdf) .\n3) Wikipedia (Jose Batlle y Ordóñez, Guerra Civil de 1904, diario El Dia, Caras Y Caretas) .\n4) Apuntes de clase. \n 5) Gemini (corrección de los textos y faltas de ortografía)."
       }
     ]
   }

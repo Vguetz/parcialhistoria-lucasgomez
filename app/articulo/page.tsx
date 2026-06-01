@@ -13,6 +13,7 @@ export default function Articulo1904() {
           <span>Montevideo, 15 de Septiembre de 1904</span>
           <span>Edición Especial</span>
           <span>Precio: 2 Centésimos</span>
+          <span>Escrito por: Lucas Gomez</span>
         </div>
       </header>
 

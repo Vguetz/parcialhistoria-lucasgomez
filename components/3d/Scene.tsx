@@ -14,7 +14,14 @@ import * as THREE from "three";
 import { useThree, useFrame } from "@react-three/fiber";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
-type OpenItem = "batlle" | "caras" | "eldia" | "parte3" | "parte4" | null;
+type OpenItem =
+  | "batlle"
+  | "caras"
+  | "eldia"
+  | "parte3"
+  | "parte4"
+  | "fuentes"
+  | null;
 
 // ─── Cámara animada con lerp ────────────────────────────────────────────────
 function CameraRig({
@@ -73,7 +80,9 @@ function ContentPanel({
           ? "parte3"
           : openItem === "parte4"
             ? "parte4"
-            : null;
+            : openItem === "fuentes"
+              ? "fuentes"
+              : null; // <-- Agregamos esta línea
 
   return (
     <div
@@ -154,7 +163,9 @@ function ContentPanel({
                   <h3 className="font-bold mb-2 italic text-[#9d0006] text-sm md:text-base">
                     {item.q}
                   </h3>
-                  <p className="text-justify text-sm md:text-base">{item.a}</p>
+                  <p className="text-justify text-sm md:text-base whitespace-pre-wrap">
+                    {item.a}
+                  </p>
                 </div>
               ))}
             </div>
@@ -620,6 +631,100 @@ function useCartaTexture() {
   return texture.current;
 }
 
+// ─── Libro de Fuentes (Bibliografía) ────────────────────────────────────────
+function useFuentesTexture() {
+  const texture = useRef<THREE.CanvasTexture | null>(null);
+
+  if (!texture.current) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 550;
+    const ctx = canvas.getContext("2d")!;
+
+    // Tapa del libro: Verde oscuro clásico (estilo biblioteca antigua)
+    ctx.fillStyle = "#233329";
+    ctx.fillRect(0, 0, 400, 550);
+
+    // Borde dorado
+    ctx.strokeStyle = "#b59b54";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(20, 20, 360, 510);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(32, 32, 336, 486);
+
+    // Detalles del lomo (simulando relieve a la izquierda)
+    ctx.fillStyle = "#16211a";
+    ctx.fillRect(0, 0, 15, 550);
+
+    // Texto de la tapa
+    ctx.fillStyle = "#b59b54";
+    ctx.textAlign = "center";
+    ctx.font = "bold 28px serif";
+    ctx.fillText("BIBLIOGRAFÍA", 200, 250);
+
+    ctx.font = "italic 16px serif";
+    ctx.fillText("Fuentes y", 200, 290);
+    ctx.fillText("Referencias Históricas", 200, 315);
+    ctx.fillText("Lucas Gomez", 200, 340);
+
+    // Decoración inferior
+    ctx.fillRect(170, 450, 60, 3);
+
+    texture.current = new THREE.CanvasTexture(canvas);
+  }
+  return texture.current;
+}
+
+function FuentesItem({ position, isOpen, onOpen }: any) {
+  const [hovered, setHovered] = useState(false);
+  const tex = useFuentesTexture();
+
+  useEffect(() => {
+    document.body.style.cursor = hovered && !isOpen ? "pointer" : "auto";
+  }, [hovered, isOpen]);
+
+  const { pos, rot } = useSpring({
+    pos: isOpen ? [0, 5.2, 2.6] : position,
+    rot: isOpen ? [-Math.PI / 2, 0, 0] : [0, 0.5, 0], // Inclinado hacia la derecha
+    config: { mass: 1, tension: 80, friction: 22 },
+  });
+
+  return (
+    <animated.mesh
+      position={pos as any}
+      rotation={rot as any}
+      castShadow
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => setHovered(false)}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!isOpen) onOpen();
+      }}
+    >
+      {/* Geometría un poco más gruesa para simular un libro, no una hoja */}
+      <boxGeometry args={[1.1, 0.15, 1.6]} />
+      <meshStandardMaterial
+        map={tex}
+        color={hovered && !isOpen ? "#e8e8e8" : "#d1d1d1"}
+      />
+      {!isOpen && (
+        <Html position={[0, 0.5, 0]} center>
+          <div
+            className={`transition-all duration-300 pointer-events-none select-none ${hovered ? "opacity-100 -translate-y-2" : "opacity-0"}`}
+          >
+            <div className="bg-[#3c3836] text-[#fbf1c7] px-4 py-2 rounded border border-[#b57614] font-serif text-sm">
+              ✦ Ver Fuentes
+            </div>
+          </div>
+        </Html>
+      )}
+    </animated.mesh>
+  );
+}
+
 function CartaItem({ position, isOpen, onOpen }: any) {
   const [hovered, setHovered] = useState(false);
   const tex = useCartaTexture();
@@ -673,12 +778,12 @@ export default function Scene() {
 
   const POSITIONS = {
     batlle: [-0.4, 3.7, 0.5] as [number, number, number],
-    caras: [1.2, 3.7, 0.2] as [number, number, number],
+    caras: [1, 3.7, 0.2] as [number, number, number],
     eldia: [-2.2, 3.7, -0.8] as [number, number, number],
-    parte3: [2.2, 3.7, -0.6] as [number, number, number], // Derecha, un poco atrás
-    parte4: [-2, 3.7, 1.8] as [number, number, number], // Izquierda, más cerca tuyo
+    parte3: [2.2, 3.7, -0.6] as [number, number, number],
+    parte4: [-1.5, 3.7, 1.8] as [number, number, number],
+    fuentes: [1.6, 3.7, 1.3] as [number, number, number], // <-- Nueva posición
   };
-
   const camTarget = new THREE.Vector3(
     0,
     openItem ? 5.8 : 5.5,
@@ -771,6 +876,11 @@ export default function Scene() {
               position={POSITIONS.parte4}
               isOpen={openItem === "parte4"}
               onOpen={() => setOpenItem("parte4")}
+            />
+            <FuentesItem
+              position={POSITIONS.fuentes}
+              isOpen={openItem === "fuentes"}
+              onOpen={() => setOpenItem("fuentes")}
             />
           </Suspense>
         </Canvas>
